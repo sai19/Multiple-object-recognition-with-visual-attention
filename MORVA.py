@@ -9,52 +9,73 @@ from keras.layers import Conv2D,Dense
 from keras import backend as K
 from keras.models import Model
 import keras
+from keras.layers import Input
 from keras import metrics
 from keras.datasets import mnist
 import numpy as np
 import cv2
 
 
-def get_glimpse_network(filter_size,model_depth,filters,output_size,input_size_image,input_size_loc,hidden_vector_length):
-	model_convolve = Sequential()
-	for i in range(model_depth):
-		if i==0:
-			model_convolve.add(Conv2D(filter_size,filters,input_shape=input_size))
-		else:
-			model_convolve.add(Conv2D(filter_size,filters))	
-	model_convolve.add(Flatten())
-	model_convolve.add(Dense(output_size))
+class glimpse_net(object):
+	def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+	def get_glimpse_network(self,glimpse,loc):
+		#glimpse network
+		for i in range(model_depth):
+			if i==0:
+				model_convolve = Conv2D(self.filter_size,self.filters)(glimpse)
+			else:
+				model_convolve = Conv2D(filter_size,filters)(model_convolve)	
+		model_convolve = Flatten()(model_convolve)
+		model_convolve = Dense(output_size)(model_convolve)
+		# location network
+		model_loc = Dense(hiden_vector_length)(loc)
+		model_loc = Dense(output_size)(model_loc)
+		model_out = Merge(model_loc,model_convolve)
+		self.out = model_out 
 
-	model_loc = Sequential()
-	model_loc.add(Dense(hiden_vector_length,input_shape=input_size_loc))
-	model_loc.add(Dense(output_size))
+class recurrent_net(object):
+	def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
 
-	return model_convolve,model_loc
+	def get_reccurent_network(self,model_reccurent):
+		model_reccurent_1 = LSTM(rnn_hidden_size,name="rnn_output_1")(model_reccurent)
+		model_reccurent_2 = LSTM(rnn_hidden_size,name="rnn_output_2")(model_reccurent_1)
+		self.reccurent1 = model_reccurent_1
+		self.reccurent2 = model_reccurent_2
 
-def get_reccurent_network(input_size,rnn_hidden_size):
-	model_reccurent = Sequential()
-	model_reccurent.add(LSTM(rnn_hidden_size,input_shape=input_size,name="rnn_output_1"))
-	model_reccurent.add(LSTM(rnn_hidden_size,name="rnn_output_2"))
-	return model_reccurent
+class emission_net(object):
+	def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+	def get_emission_network(self,model_emission):
+		model_emission_out = Dense(input_size_loc)(model_emission)
+		self.out = model_emission_out
 
-def get_emission_network(rnn_hidden_size,input_size_loc):
-	model_emission = Sequential()
-	model_emission.add(Dense(input_size_loc,input_shape=rnn_hidden_size))
-	return model_emission
+class context_net(object):
+	def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+	def get_context_network(self,model_context):
+		for i in range(model_depth):
+			if i==0:
+				model_context_out = Conv2D(filter_size,filters)(model_context)
+			else:
+				model_context_out = Conv2D(filter_size,filters)(model_context_out)	
+		model_context_out = Flatten()(model_context_out)
+		model_context_out = Dense(rnn_hidden_size)(model_context_out)
+		self.out = model_context_out
 
-def get_context_network(filter_size,model_depth,filters,rnn_hidden_size):
-	model_context = Sequential()
-	for i in range(model_depth):
-		if i==0:
-			model_context.add(Conv2D(filter_size,filters,input_shape=input_size))
-		else:
-			model_context.add(Conv2D(filter_size,filters))	
-	model_context.add(Flatten())
-	model_context.add(Dense(rnn_hidden_size))
-	return model_context
+class class_net(object):
+	def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+	def get_classification_network(self,model_classify):
+		model_classify_out = Dense(self.class_hidden_size)(model_classify)
+		model_classify_out = Dense(nb_classes,activation="softmax")(model_classify_out)
+		self.out = model_classify_out
 
-def get_classification_network(rnn_hidden_size,class_hidden_size,nb_classes):
-	model_classify = Sequential()
-	model_classify.add(Dense(class_hidden_size,input_shape=rnn_hidden_size))
-	model_classify.add(Dense(nb_classes,activation="softmax"))	
+
 
